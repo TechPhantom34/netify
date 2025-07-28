@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mobil Oyunlar</title>
+    <style>
+        * { 
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #f5f5f5;
+            touch-action: manipulation;
+            overflow-x: hidden;
+        }
+        header {
+            background: #2c3e50;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 10;
+        }
+        .main-content {
+            margin-top: 70px;
+            margin-bottom: 60px;
+        }
+        .game-container {
+            display: none;
+            padding: 10px;
+        }
+        #gameCanvas {
+            background: #000;
+            display: block;
+            width: 100%;
+            max-width: 100%;
+            margin: 0 auto;
+        }
+        .controls {
+            text-align: center;
+            padding: 10px;
+            background: #ecf0f1;
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            z-index: 10;
+            box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
+        }
+        .health-display {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            font-size: 2rem;
+            z-index: 100;
+            pointer-events: none;
+        }
+        .game-list {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+            padding: 10px;
+        }
+        .game-card {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin: 5px;
+        }
+        .game-card img {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+            border-radius: 5px;
+        }
+        .back-btn {
+            display: inline-block;
+            background: #7f8c8d;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-size: 16px;
+        }
+        .score-display {
+            font-size: 18px;
+            font-weight: bold;
+            margin: 5px 0;
+        }
+        @media (min-width: 600px) {
+            .game-list {
+                grid-template-columns: 1fr 1fr;
+            }
+            #gameCanvas {
+                max-width: 500px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Mobil Oyunlar</h1>
+    </header>
+
+    <div class="main-content">
+        <div id="main-menu">
+            <div class="game-list">
+                <div class="game-card" onclick="startGame('snake')">
+                    <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMDAgMjAwIj48cmVjdCB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iIzI3YWU2MCIvPjxyZWN0IHg9IjUwIiB5PSIxMDAiIHdpZHRoPSIxOCIgaGVpZ2h0PSIxOCIgZmlsbD0iIzJlY2M3MSIvPjxyZWN0IHg9IjcwIiB5PSIxMDAiIHdpZHRoPSIxOCIgaGVpZ2h0PSIxOCIgZmlsbD0iIzJlY2M3MSIvPjxyZWN0IHg9IjkwIiB5PSIxMDAiIHdpZHRoPSIxOCIgaGVpZ2h0PSIxOCIgZmlsbD0iIzJlY2M3MSIvPjxyZWN0IHg9IjE1MCIgeT0iMTAwIiB3aWR0aD0iMTgiIGhlaWdodD0iMTgiIGZpbGw9IiNlNzRjM2MiLz48L3N2Zz4=">
+                    <h3>Yılan Oyunu</h3>
+                    <p>Klasik yılan oyununun mobil versiyonu</p>
+                </div>
+                <div class="game-card" onclick="startGame('space')">
+                    <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMDAgMjAwIj48cmVjdCB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iIzAwMCIvPjxwYXRoIGQ9Ik0xNTAgMTgwTDEzMCAxNTBMMTcwIDE1MFoiIGZpbGw9IiMzNDk4ZGIiLz48Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSIxNSIgZmlsbD0iI2YxYzQwZiIvPjwvc3ZnPg==">
+                    <h3>Uzay Savunma</h3>
+                    <p>Düşman gemilerini vur ve puan topla</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="snake-game" class="game-container">
+            <canvas id="snakeCanvas"></canvas>
+            <div class="controls">
+                <div class="score-display">Skor: <span id="score">0</span></div>
+                <div>
+                    <a href="#" class="back-btn" onclick="backToMenu()">Menüye Dön</a>
+                </div>
+            </div>
+        </div>
+
+        <div id="space-game" class="game-container">
+            <canvas id="spaceCanvas"></canvas>
+            <div class="controls">
+                <div class="score-display">
+                    Can: <span id="health">3</span> | 
+                    Puan: <span id="spaceScore">0</span>
+                </div>
+                <div>
+                    <a href="#" class="back-btn" onclick="backToMenu()">Menüye Dön</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="health-display" id="healthDisplay">
+        <div id="healthMessage">Can Azaldı!</div>
+    </div>
+
+    <script>
+        // Oyun değişkenleri
+        let currentGame = null;
+        const healthDisplay = document.getElementById('healthDisplay');
+        const healthMessage = document.getElementById('healthMessage');
+        
+        // Canvas boyutlarını ayarla
+        function setupCanvas(canvasId) {
+            const canvas = document.getElementById(canvasId);
+            const container = canvas.parentElement;
+            
+            // Mobil cihazlarda tam ekrana yakın boyut
+            const isMobile = window.innerWidth <= 600;
+            const width = isMobile ? window.innerWidth - 20 : 500;
+            const height = isMobile ? window.innerHeight - 180 : 500;
+            
+            canvas.width = width;
+            canvas.height = height;
+            
+            return { canvas, width, height };
+        }
+
+        // Oyun başlatma
+        function startGame(game) {
+            document.getElementById('main-menu').style.display = 'none';
+            document.getElementById(game + '-game').style.display = 'block';
+            currentGame = game;
+            
+            if(game === 'snake') initSnake();
+            if(game === 'space') initSpace();
+        }
+
+        // Menüye dön
+        function backToMenu() {
+            document.querySelectorAll('.game-container').forEach(el => {
+                el.style.display = 'none';
+            });
+            document.getElementById('main-menu').style.display = 'block';
+            currentGame = null;
+            window.scrollTo(0, 0);
+        }
+
+        // Can gösterimi
+        function showHealth(message) {
+            healthMessage.textContent = message;
+            healthDisplay.style.display = 'flex';
+            setTimeout(() => {
+                healthDisplay.style.display = 'none';
+            }, 1000);
+        }
+
+        // Yılan Oyunu
+        function initSnake() {
+            const { canvas, width, height } = setupCanvas('snakeCanvas');
+            const ctx = canvas.getContext('2d');
+            const scoreElement = document.getElementById('score');
+            
+            const cellSize = 15;
+            let snake = [{x: Math.floor(width/2/cellSize)*cellSize, y: Math.floor(height/2/cellSize)*cellSize}];
+            let food = {x: 0, y: 0};
+            let dx = 0, dy = -cellSize;
+            let score = 0;
+            let gameOver = false;
+            
+            // Yem oluştur
+            function placeFood() {
+                food.x = Math.floor(Math.random() * (width/cellSize)) * cellSize;
+                food.y = Math.floor(Math.random() * (height/cellSize)) * cellSize;
+                
+                // Yılanın üzerine gelmemesi için kontrol
+                snake.forEach(segment => {
+                    if(segment.x === food.x && segment.y === food.y) {
+                        placeFood();
+                    }
+                });
+            }
+            
+            // Oyun çizimleri
+            function draw() {
+                if(gameOver) return;
+                
+                // Temizle
+                ctx.clearRect(0, 0, width, height);
+                
+                // Yılanı çiz
+                snake.forEach((part, i) => {
+                    ctx.fillStyle = i === 0 ? '#2ecc71' : '#27ae60';
+                    ctx.fillRect(part.x, part.y, cellSize-1, cellSize-1);
+                });
+                
+                // Yemi çiz
+                ctx.fillStyle = '#e74c3c';
+                ctx.fillRect(food.x, food.y, cellSize-1, cellSize-1);
+                
+                // Yılanı hareket ettir
+                const head = {x: snake[0].x + dx, y: snake[0].y + dy};
+                
+                // Çarpışma kontrolü
+                if(head.x < 0 || head.x >= width || head.y < 0 || head.y >= height || 
+                   snake.some(segment => segment.x === head.x && segment.y === head.y)) {
+                    gameOver = true;
+                    showHealth("Oyun Bitti! Skor: " + score);
+                    setTimeout(backToMenu, 1500);
+                    return;
+                }
+                
+                snake.unshift(head);
+                
+                // Yem yendi mi?
+                if(head.x === food.x && head.y === food.y) {
+                    score += 10;
+                    scoreElement.textContent = score;
+                    placeFood();
+                } else {
+                    snake.pop();
+                }
+                
+                // Oyun hızı
+                setTimeout(() => requestAnimationFrame(draw), 100);
+            }
+            
+            // Dokunmatik kontroller
+            let touchStartX = 0;
+            let touchStartY = 0;
+            
+            canvas.addEventListener('touchstart', e => {
+                e.preventDefault();
+                touchStartX = e.touches[0].clientX;
+                touchStartY = e.touches[0].clientY;
+            }, { passive: false });
+            
+            canvas.addEventListener('touchmove', e => {
+                e.preventDefault();
+            }, { passive: false });
+            
+            canvas.addEventListener('touchend', e => {
+                e.preventDefault();
+                const touchEndX = e.changedTouches[0].clientX;
+                const touchEndY = e.changedTouches[0].clientY;
+                
+                const dxTouch = touchEndX - touchStartX;
+                const dyTouch = touchEndY - touchStartY;
+                
+                if(Math.abs(dxTouch) > Math.abs(dyTouch)) {
+                    // Yatay hareket
+                    if(dxTouch > 0 && dx === 0) { dx = cellSize; dy = 0; }
+                    else if(dx === 0) { dx = -cellSize; dy = 0; }
+                } else {
+                    // Dikey hareket
+                    if(dyTouch > 0 && dy === 0) { dx = 0; dy = cellSize; }
+                    else if(dy === 0) { dx = 0; dy = -cellSize; }
+                }
+            }, { passive: false });
+            
+            // Klavye kontrolleri
+            document.addEventListener('keydown', e => {
+                if(e.key === 'ArrowUp' && dy === 0) { dx = 0; dy = -cellSize; }
+                else if(e.key === 'ArrowDown' && dy === 0) { dx = 0; dy = cellSize; }
+                else if(e.key === 'ArrowLeft' && dx === 0) { dx = -cellSize; dy = 0; }
+                else if(e.key === 'ArrowRight' && dx === 0) { dx = cellSize; dy = 0; }
+            });
+            
+            placeFood();
+            draw();
+        }
+
+        // Uzay Oyunu
+        function initSpace() {
+            const { canvas, width, height } = setupCanvas('spaceCanvas');
+            const ctx = canvas.getContext('2d');
+            const healthElement = document.getElementById('health');
+            const scoreElement = document.getElementById('spaceScore');
+            
+            let ship = {x: width/2 - 15, y: height - 50, width: 30, height: 30};
+            let bullets = [];
+            let enemies = [];
+            let health = 3;
+            let score = 0;
+            let lastShot = 0;
+            let isTouching = false;
+            let touchX = 0;
+            
+            // Gemiyi çiz
+            function drawShip() {
+                ctx.fillStyle = '#3498db';
+                ctx.beginPath();
+                ctx.moveTo(ship.x + ship.width/2, ship.y);
+                ctx.lineTo(ship.x, ship.y + ship.height);
+                ctx.lineTo(ship.x + ship.width, ship.y + ship.height);
+                ctx.fill();
+            }
+            
+            // Oyun güncelleme
+            function update() {
+                // Temizle
+                ctx.clearRect(0, 0, width, height);
+                
+                // Gemiyi çiz
+                drawShip();
+                
+                // Mermileri çiz ve hareket ettir
+                ctx.fillStyle = '#f1c40f';
+                bullets = bullets.filter(bullet => {
+                    ctx.fillRect(bullet.x, bullet.y, 4, 12);
+                    bullet.y -= 8;
+                    return bullet.y > 0;
+                });
+                
+                // Düşman oluştur
+                if(Math.random() < 0.02) {
+                    enemies.push({
+                        x: Math.random() * (width - 30),
+                        y: 0,
+                        width: 30,
+                        height: 30,
+                        speed: 1 + Math.random() * 2
+                    });
+                }
+                
+                // Düşmanları çiz ve hareket ettir
+                enemies = enemies.filter(enemy => {
+                    ctx.fillStyle = '#e74c3c';
+                    ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
+                    enemy.y += enemy.speed;
+                    
+                    // Çarpışma kontrolü (mermi-düşman)
+                    bullets.forEach((bullet, bi) => {
+                        if(bullet.x > enemy.x && bullet.x < enemy.x + enemy.width &&
+                           bullet.y < enemy.y + enemy.height) {
+                            bullets.splice(bi, 1);
+                            score += 10;
+                            scoreElement.textContent = score;
+                            return false;
+                        }
+                    });
+                    
+                    // Gemiye çarptı mı?
+                    if(enemy.y + enemy.height > ship.y &&
+                       enemy.x < ship.x + ship.width &&
+                       enemy.x + enemy.width > ship.x) {
+                        health--;
+                        healthElement.textContent = health;
+                        showHealth("Can Azaldı: " + health);
+                        
+                        if(health <= 0) {
+                            showHealth("Oyun Bitti! Puan: " + score);
+                            setTimeout(backToMenu, 1500);
+                            return false;
+                        }
+                        return false;
+                    }
+                    
+                    return enemy.y < height;
+                });
+                
+                // Dokunmatik hareket
+                if(isTouching) {
+                    ship.x = touchX - ship.width/2;
+                    ship.x = Math.max(0, Math.min(width - ship.width, ship.x));
+                }
+                
+                requestAnimationFrame(update);
+            }
+            
+            // Dokunmatik kontroller
+            canvas.addEventListener('touchstart', e => {
+                e.preventDefault();
+                isTouching = true;
+                const rect = canvas.getBoundingClientRect();
+                touchX = e.touches[0].clientX - rect.left;
+                
+                // Ateş et
+                if(Date.now() - lastShot > 300) {
+                    bullets.push({
+                        x: ship.x + ship.width/2 - 2,
+                        y: ship.y
+                    });
+                    lastShot = Date.now();
+                }
+            }, { passive: false });
+            
+            canvas.addEventListener('touchmove', e => {
+                e.preventDefault();
+                const rect = canvas.getBoundingClientRect();
+                touchX = e.touches[0].clientX - rect.left;
+            }, { passive: false });
+            
+            canvas.addEventListener('touchend', e => {
+                e.preventDefault();
+                isTouching = false;
+            }, { passive: false });
+            
+            // Klavye kontrolleri
+            document.addEventListener('keydown', e => {
+                if(e.key === 'ArrowLeft') ship.x = Math.max(0, ship.x - 10);
+                if(e.key === 'ArrowRight') ship.x = Math.min(width - ship.width, ship.x + 10);
+                if(e.key === ' ' && Date.now() - lastShot > 300) {
+                    bullets.push({
+                        x: ship.x + ship.width/2 - 2,
+                        y: ship.y
+                    });
+                    lastShot = Date.now();
+                }
+            });
+            
+            update();
+        }
+    </script>
+</body>
+</html>
